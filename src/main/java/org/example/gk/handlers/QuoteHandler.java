@@ -6,20 +6,21 @@
 	import io.vertx.ext.web.RoutingContext;
 	import org.example.gk.models.ApiException;
 	import org.example.gk.models.QuoteRequest;
-	import org.example.gk.services.LoyalityPointService;
+	import org.example.gk.services.LoyaltyPointService;
+
 
 	public class QuoteHandler implements Handler<RoutingContext> {
 
-		private final LoyalityPointService loyalityPointService;
+		private final LoyaltyPointService loyaltyPointService;
 
-		public QuoteHandler(LoyalityPointService _loyalityPointService) {
-			this.loyalityPointService = _loyalityPointService;
+		public QuoteHandler(LoyaltyPointService _loyaltyPointService) {
+			this.loyaltyPointService = _loyaltyPointService;
 		}
 
 		@Override
 		public void handle(RoutingContext ctx) {
 			QuoteRequest quoteRequest = ctx.body ( ).asPojo (QuoteRequest.class);
-			loyalityPointService.calCulatePoints (quoteRequest)
+			loyaltyPointService.calCulatePoints (quoteRequest)
 					.onSuccess (response -> {
 						ctx.response ( ).putHeader ("Content-Type", "application/json")
 								.end (Json.encodePrettily (response));

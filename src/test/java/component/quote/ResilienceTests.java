@@ -6,24 +6,24 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import org.example.gk.constants.Constants;
 import org.junit.jupiter.api.*;
+import java.util.concurrent.TimeUnit;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.example.gk.TestData.TestDataGenerator.validRequest;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class ResilienceTests extends BaseTest {
 
 	@Test
-	public void shouldReturn500WhenFxserverFails(Vertx vertx, VertxTestContext tc) {
+	public void shouldReturn500WhenFxServerFails(Vertx vertx, VertxTestContext tc) {
+		WebClient client = WebClient.create (vertx);
 		fxStubs.setFxServer500Status (fxServer);
-		client = WebClient.create (vertx);
 		client.post (port, Constants.HOST, Constants.POINT_URI)
 				.sendJson (validRequest ( ), ar -> {
 					if ( ar.succeeded ( ) && ar.result ( ).statusCode ( ) == 500 ) {
 						tc.verify (() -> {
-							assertEquals (500, ar.result ( ).bodyAsJsonObject ( ).getInteger (Constants.STATUS_CODE));
-							assertTrue (ar.result ( ).bodyAsJsonObject ( ).getString (Constants.MESSAGE).contains ("FX Issue"));
+							assertThat ( ar.result ( ).bodyAsJsonObject ( ).getInteger (Constants.STATUS_CODE)).isEqualTo (500);
+							assertThat (ar.result ( ).bodyAsJsonObject ( ).getString (Constants.MESSAGE)).contains ("FX Issue");
 
 						});
 						tc.completeNow ( );
@@ -34,7 +34,7 @@ public class ResilienceTests extends BaseTest {
 	}
 
 	@Test
-	void ShouldSucceedWhenFxFailsOnceThenRecovers(Vertx vertx, VertxTestContext tc) {
+	void shouldSucceedWhenFxFailsOnceThenRecovers(Vertx vertx, VertxTestContext tc) {
 		fxStubs.setFxServerFailOnceThenRecover (fxServer);
 		promoStubs.setPromoServer200status (promoServer);
 		WebClient client = WebClient.create (vertx);
@@ -43,8 +43,8 @@ public class ResilienceTests extends BaseTest {
 					if ( ar.succeeded ( ) ) {
 						var response = ar.result ( );
 						tc.verify (() -> {
-							assertEquals (200, ar.result ( ).statusCode ( ));
-							assertEquals (ar.result ( ).bodyAsJsonObject ( ).getDouble ("effectiveFxRate"), 1.2);
+							assertThat ( response.statusCode ( )).isEqualTo (200);
+							assertThat (response.bodyAsJsonObject ( ).getDouble ("effectiveFxRate")).isEqualTo (1.2);
 						});
 
 						tc.completeNow ( );
@@ -56,15 +56,16 @@ public class ResilienceTests extends BaseTest {
 	}
 
 	@Test
+	@Timeout(value = 10, unit = TimeUnit.SECONDS)
 	void shouldFailWhenFxTimesOut(Vertx vertx, VertxTestContext tc) {
 		fxStubs.setFxServerTimeOut (fxServer);
 		WebClient client = WebClient.create (vertx);
 		client.post (port, Constants.HOST, Constants.POINT_URI)
 				.sendJson (validRequest ( ), ar -> {
 					if ( ar.succeeded ( ) ) {
-						tc.verify (() -> {
-							assertEquals (500, ar.result ( ).statusCode ( ));
-						});
+						tc.verify (() ->
+							assertThat ( ar.result ( ).statusCode ( )).isEqualTo (500)
+						);
 						tc.completeNow ( );
 					} else {
 						tc.failNow (ar.cause ( ));
@@ -79,10 +80,10 @@ public class ResilienceTests extends BaseTest {
 		client.post (port, Constants.HOST, Constants.POINT_URI)
 				.sendJson (validRequest ( ), ar -> {
 					if ( ar.succeeded ( ) ) {
-						tc.verify (() -> {
+						tc.verify (() ->
 							fxServer.verify (3,
-									getRequestedFor (urlPathEqualTo (Constants.FX_URI)));
-						});
+									getRequestedFor (urlPathEqualTo (Constants.FX_URI)))
+						);
 						tc.completeNow ( );
 					} else {
 						tc.failNow (ar.cause ( ));
@@ -97,9 +98,9 @@ public class ResilienceTests extends BaseTest {
 		client.post (port, Constants.HOST, Constants.POINT_URI)
 				.sendJson (validRequest ( ), ar -> {
 					if ( ar.succeeded ( ) ) {
-						tc.verify (() -> {
-							assertEquals (404, ar.result ( ).statusCode ( ));
-						});
+						tc.verify (() ->
+							assertThat ( ar.result ( ).statusCode ( )).isEqualTo (404)
+						);
 						tc.completeNow ( );
 					} else {
 						tc.failNow (ar.cause ( ));
@@ -109,15 +110,7 @@ public class ResilienceTests extends BaseTest {
 	}
 
 
-	@AfterEach
-	public void tearDown() {
-		if ( fxServer != null ) {
-			fxServer.stop ( );
-		}
 
-		if ( promoServer != null ) {
-			promoServer.stop ( );
-		}
 	}
 
-}
+

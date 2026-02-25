@@ -4,7 +4,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -12,23 +11,20 @@ import org.example.gk.constants.Constants;
 import org.example.gk.gateway.FxGateway;
 import org.example.gk.gateway.PromoGateWay;
 import org.example.gk.handlers.QuoteHandler;
-import org.example.gk.services.LoyalityPointService;
+import org.example.gk.services.LoyaltyPointService;
 import org.example.gk.stubs.FxStubs;
 import org.example.gk.stubs.PromoStubs;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-import static io.vertx.core.http.impl.HttpClientConnection.log;
-
 @ExtendWith (VertxExtension.class)
 public class BaseTest {
 	private static final Logger log =
 			LoggerFactory.getLogger(BaseTest.class);
-
-	protected  WebClient client;
 	protected  int port;
 	protected   WireMockServer fxServer;
 	protected   WireMockServer promoServer;
@@ -51,21 +47,32 @@ public class BaseTest {
 			ctx.next ();
 		});
 		router.post (Constants.POINT_URI)
-				.handler (new QuoteHandler (new LoyalityPointService(new FxGateway(vertx, fxServer.port ( )),
+				.handler (new QuoteHandler (new LoyaltyPointService(new FxGateway(vertx, fxServer.port ( )),
 						new PromoGateWay (vertx, promoServer.port ( )))));
 		vertx.createHttpServer ( )
 				.requestHandler (router)
 				.listen (0)
 				.onSuccess (res -> {
-					System.out.println ("Server has been Started at" + res.actualPort () );
+					log.info ("Server has been Started at" + res.actualPort () );
 					port = res.actualPort ();
 					tc.completeNow ();
 				})
 				.onFailure (res -> {
-					System.out.println (res.getMessage () );
+					log.error (res.getMessage () );
 					tc.failNow ("Server is not started");
 				});
 
+	}
+
+
+	@AfterEach
+	public void tearDown() {
+		if( fxServer.isRunning ( ) ) {
+			fxServer.stop ();
+		}
+		if( promoServer.isRunning ( ) ) {
+			promoServer.stop ();
+		}
 	}
 
 

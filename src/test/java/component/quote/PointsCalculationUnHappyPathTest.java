@@ -5,9 +5,11 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.example.gk.Main;
 import org.example.gk.TestData.TestDataGenerator;
 import org.example.gk.constants.Constants;
 import org.example.gk.models.ApiException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -16,7 +18,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(VertxExtension.class)
 public class PointsCalculationUnHappyPathTest {
-	public int port = 8085;
+	private int port;
+
+	@BeforeEach
+	void SetUp(VertxTestContext testContext) {
+
+		Main.startServer()
+				.onSuccess(actualPort -> {
+					this.port = actualPort;
+					testContext.completeNow();
+				})
+				.onFailure(testContext::failNow);
+	}
 
 	static Stream<JsonObject> getQuoteTestata() {
 		return TestDataGenerator.getUnHappyPathTestData ();
@@ -35,7 +48,7 @@ public class PointsCalculationUnHappyPathTest {
 								var resp = ar.result ( );
 								tc.verify (() -> {
 									assertThat (resp.statusCode ( )).isEqualTo (400);
-									assertThat (resp.bodyAsJsonObject ( ).getString (Constants.ERROR_CODE).isEmpty ( ));
+									assertThat (resp.bodyAsJsonObject ( ).getString (Constants.ERROR_CODE)).isNotEmpty ();
 								});
 								tc.completeNow ( );
 

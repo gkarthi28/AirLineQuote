@@ -13,13 +13,13 @@ import org.example.gk.models.QuoteResponse;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LoyalityPointService {
+public class LoyaltyPointService {
 
 	private static final int MAX_POINTS = 50000;
 	private final FxGateway fxClient;
 	private final PromoGateWay promoClient;
 
-		public LoyalityPointService(FxGateway _fxClient, PromoGateWay _promoClient) {
+		public LoyaltyPointService(FxGateway _fxClient, PromoGateWay _promoClient) {
 			this.fxClient = _fxClient;
 			this.promoClient = _promoClient;
 		}

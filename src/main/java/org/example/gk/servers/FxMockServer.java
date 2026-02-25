@@ -11,7 +11,7 @@ public  class FxMockServer {
 	public static  void startServer() {
 
 		 fxServer = new WireMockServer (
-				 WireMockConfiguration.options().port(8089)
+				 WireMockConfiguration.options().DYNAMIC_PORT
 		);
 
 		fxServer.start();
