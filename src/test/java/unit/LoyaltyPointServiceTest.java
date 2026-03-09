@@ -137,6 +137,110 @@ public class LoyaltyPointServiceTest {
 				}));
 			}
 
+	@Test
+	void shouldFailWhenRequestIsNull(VertxTestContext testContext) {
+		service.calCulatePoints(null).onComplete(testContext.failing(throwable -> {
+			testContext.verify(() -> {
+				assertThat(throwable).isInstanceOf(ApiException.class);
+				assertThat(((ApiException) throwable).getErrorCode()).isEqualTo("INVALID Request");
+				testContext.completeNow();
+			});
+		}));
+	}
+
+	@Test
+	void shouldFailWhenCurrencyIsInvalid(VertxTestContext testContext) {
+		QuoteRequest req = createValidRequest();
+		req.setCurrency("ABC");
+
+		service.calCulatePoints(req).onComplete(testContext.failing(throwable -> {
+			testContext.verify(() -> {
+				assertThat(throwable).isInstanceOf(ApiException.class);
+				assertThat(((ApiException) throwable).getErrorCode()).isEqualTo("INVALID_CURRENCY");
+				testContext.completeNow();
+			});
+		}));
+	}
+
+	@Test
+	void shouldFailWhenTierIsInvalid(VertxTestContext testContext) {
+		QuoteRequest req = createValidRequest();
+		req.setCustomerTier("VIPPLUS");
+
+		service.calCulatePoints(req).onComplete(testContext.failing(throwable -> {
+			testContext.verify(() -> {
+				assertThat(throwable).isInstanceOf(ApiException.class);
+				assertThat(((ApiException) throwable).getErrorCode()).isEqualTo("INVALID_TIER");
+				testContext.completeNow();
+			});
+		}));
+	}
+
+	@Test
+	void shouldFailWhenCabinIsInvalid(VertxTestContext testContext) {
+		QuoteRequest req = createValidRequest();
+		req.setCabinClass("PRIVATE");
+
+		service.calCulatePoints(req).onComplete(testContext.failing(throwable -> {
+			testContext.verify(() -> {
+				assertThat(throwable).isInstanceOf(ApiException.class);
+				assertThat(((ApiException) throwable).getErrorCode()).isEqualTo("INVALID_CABIN");
+				testContext.completeNow();
+			});
+		}));
+	}
+
+	@Test
+	void shouldFailWhenPromoCodeIsInvalid(VertxTestContext testContext) {
+		QuoteRequest req = createValidRequest();
+		req.setPromoCode("BADCODE");
+
+		service.calCulatePoints(req).onComplete(testContext.failing(throwable -> {
+			testContext.verify(() -> {
+				assertThat(throwable).isInstanceOf(ApiException.class);
+				assertThat(((ApiException) throwable).getErrorCode()).isEqualTo("INVALID_PROMOCODE");
+				testContext.completeNow();
+			});
+		}));
+	}
+
+	@Test
+	void shouldAllowNullPromoCode(VertxTestContext testContext) {
+		QuoteRequest req = createValidRequest();
+		req.setPromoCode(null);
+
+		PromoGateWay.PromoResult promo = new PromoGateWay.PromoResult(0, false, false);
+
+		when(fxClient.getFxRate("USD")).thenReturn(Future.succeededFuture(1.0));
+		when(promoClient.getPromo(null)).thenReturn(Future.succeededFuture(promo));
+
+		service.calCulatePoints(req).onComplete(testContext.succeeding(response -> {
+			testContext.verify(() -> {
+				assertThat(response).isNotNull();
+				testContext.completeNow();
+			});
+		}));
+	}
+
+	@Test
+	void shouldCapTotalPointsAtMaxLimit(VertxTestContext testContext) {
+		QuoteRequest req = createValidRequest();
+		req.setFareAmount(100000.0);
+
+		PromoGateWay.PromoResult promo = new PromoGateWay.PromoResult(5000, false, false);
+
+		when(fxClient.getFxRate("USD")).thenReturn(Future.succeededFuture(10.0));
+		when(promoClient.getPromo("SUMMER25")).thenReturn(Future.succeededFuture(promo));
+
+		service.calCulatePoints(req).onComplete(testContext.succeeding(response -> {
+			testContext.verify(() -> {
+				assertThat(response.getTotalPoints()).isEqualTo(50000);
+				testContext.completeNow();
+			});
+		}));
+	}
+
+
 
 	private QuoteRequest createValidRequest() {
 		return QuoteRequest.builder()

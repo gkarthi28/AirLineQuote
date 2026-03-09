@@ -2,7 +2,9 @@ package component;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.junit5.VertxExtension;
@@ -28,6 +30,7 @@ public class BaseTest {
 	protected  int port;
 	protected   WireMockServer fxServer;
 	protected   WireMockServer promoServer;
+	protected HttpServer appServer;
 	protected FxStubs fxStubs;
 	protected PromoStubs promoStubs;
 	@BeforeEach
@@ -38,6 +41,8 @@ public class BaseTest {
 				WireMockConfiguration.options().dynamicPort ());
 		fxServer.start();
 		promoServer.start();
+		fxServer.resetAll();
+		promoServer.resetAll();
 		fxStubs = new FxStubs ();
 		promoStubs = new PromoStubs ();
 		Router router = Router.router (vertx);
@@ -53,12 +58,13 @@ public class BaseTest {
 				.requestHandler (router)
 				.listen (0)
 				.onSuccess (res -> {
+					this.appServer = res;
 					log.info ("Server has been Started at" + res.actualPort () );
 					port = res.actualPort ();
 					tc.completeNow ();
 				})
-				.onFailure (res -> {
-					log.error (res.getMessage () );
+				.onFailure (err -> {
+					log.error (err.getMessage () );
 					tc.failNow ("Server is not started");
 				});
 
@@ -67,11 +73,14 @@ public class BaseTest {
 
 	@AfterEach
 	public void tearDown() {
-		if( fxServer.isRunning ( ) ) {
-			fxServer.stop ();
+		if (appServer != null) {
+			appServer.close();
 		}
-		if( promoServer.isRunning ( ) ) {
-			promoServer.stop ();
+		if (fxServer != null && fxServer.isRunning()) {
+			fxServer.stop();
+		}
+		if (promoServer != null && promoServer.isRunning()) {
+			promoServer.stop();
 		}
 	}
 
